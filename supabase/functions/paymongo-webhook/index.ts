@@ -15,7 +15,12 @@ Deno.serve(async(req)=>{
   const session=attrs.data??body.data?.data??{},sessionId=session.id,reference=session.attributes?.reference_number;
   if(!sessionId&&!reference)return new Response("Missing checkout session",{status:400});
   const db=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  if(eventId){const {error}=await db.from("webhook_events").insert({provider_event_id:eventId,event_type:type,payload:body});if(error?.code==="23505")return Response.json({received:true,duplicate:true});if(error)throw error;}
+  if(eventId){
+   const {data:prior,error:readErr}=await db.from("webhook_events").select("processed_at").eq("provider_event_id",eventId).maybeSingle();
+   if(readErr)throw readErr;
+   if(prior?.processed_at)return Response.json({received:true,duplicate:true});
+   if(!prior){const {error:insertErr}=await db.from("webhook_events").insert({provider_event_id:eventId,event_type:type,payload:body});if(insertErr&&insertErr.code!=="23505")throw insertErr;}
+  }
   let q=db.from("payments").select("id,booking_id,amount").eq("provider","paymongo");
   if(sessionId)q=q.eq("provider_session_id",sessionId);
   const {data:p,error:pe}=await q.maybeSingle();if(pe)throw pe;
@@ -23,7 +28,7 @@ Deno.serve(async(req)=>{
    const paid=session.attributes?.payments?.find((x:any)=>x.status==="paid");
    const {error}=await db.from("payments").update({status:"paid",paid_at:new Date().toISOString(),provider_payment_id:paid?.id??null,raw_provider_data:body}).eq("id",p.id);if(error)throw error;
    const {data:b,error:be}=await db.from("bookings").select("id,paid_amount").eq("id",p.booking_id).single();if(be)throw be;
-   const {error:ue}=await db.from("bookings").update({status:"confirmed",paid_amount:Math.max(b.paid_amount,p.amount),updated_at:new Date().toISOString()}).eq("id",b.id);if(ue)throw ue;
+   const {error:ue}=await db.from("bookings").update({status:"confirmed",paid_amount:Math.min(Number(b.paid_amount)+Number(p.amount),Number((await db.from("bookings").select("subtotal").eq("id",b.id).single()).data?.subtotal??Number(b.paid_amount)+Number(p.amount))),updated_at:new Date().toISOString()}).eq("id",b.id);if(ue)throw ue;
   }else if(reference){
    const {data:b}=await db.from("bookings").select("id,amount_due_now").eq("reference",reference).maybeSingle();
    if(b){const {error}=await db.from("payments").insert({booking_id:b.id,provider:"paymongo",provider_session_id:sessionId,amount:b.amount_due_now,currency:"PHP",status:"paid",paid_at:new Date().toISOString(),raw_provider_data:body});if(error&&error.code!=="23505")throw error;await db.from("bookings").update({status:"confirmed",paid_amount:b.amount_due_now,updated_at:new Date().toISOString()}).eq("id",b.id);}
