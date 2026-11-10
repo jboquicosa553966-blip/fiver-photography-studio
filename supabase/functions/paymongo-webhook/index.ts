@@ -36,7 +36,7 @@ Deno.serve(async(req)=>{
    }
   }else if(reference){
    const {data:b}=await db.from("bookings").select("id,amount_due_now").eq("reference",reference).maybeSingle();
-   if(b){const {error}=await db.from("payments").insert({booking_id:b.id,provider:"paymongo",provider_session_id:sessionId,amount:b.amount_due_now,currency:"PHP",status:"paid",paid_at:new Date().toISOString(),raw_provider_data:body});if(error&&error.code!=="23505")throw error;await db.from("bookings").update({status:"confirmed",paid_amount:b.amount_due_now,updated_at:new Date().toISOString()}).eq("id",b.id);}
+   if(b){const {error}=await db.from("payments").insert({booking_id:b.id,provider:"paymongo",provider_session_id:sessionId,amount:b.amount_due_now,currency:"PHP",status:"paid",paid_at:new Date().toISOString(),raw_provider_data:body});if(error&&error.code!=="23505")throw error;const {data:full}=await db.from("bookings").select("id,status,user_id,reference").eq("id",b.id).single();if(["expired","cancelled"].includes(full.status)){const {error:re}=await db.from("service_requests").insert({user_id:full.user_id,request_type:"refund",status:"urgent_review",details:{booking_id:full.id,reference:full.reference,reason:"Payment received after booking slot was released. Staff must contact customer and review refund."},amount:b.amount_due_now});if(re)throw re;}else{await db.from("bookings").update({status:"confirmed",paid_amount:b.amount_due_now,updated_at:new Date().toISOString()}).eq("id",b.id);}}
   }
   if(eventId)await db.from("webhook_events").update({processed_at:new Date().toISOString()}).eq("provider_event_id",eventId);
   return Response.json({received:true});
