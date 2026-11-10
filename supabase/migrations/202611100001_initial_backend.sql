@@ -213,7 +213,7 @@ begin
   if v_uid is null then raise exception 'Authentication required'; end if;
   select * into v_pkg from public.packages where slug=p_package_slug and active;
   if not found then raise exception 'Package unavailable'; end if;
-  if p_party_size < v_pkg.min_people or (v_pkg.max_people is not null and p_party_size > v_pkg.max_people and p_package_slug <> 'frames-together') then
+  if p_party_size < v_pkg.min_people or (v_pkg.max_people is not null and p_party_size > v_pkg.max_people) then
     raise exception 'Invalid party size for this package';
   end if;
   v_local_start := p_starts_at at time zone 'Asia/Manila';
@@ -224,9 +224,6 @@ begin
   end if;
   v_end := p_starts_at + make_interval(mins=>v_pkg.duration_minutes);
   v_total := v_pkg.base_price;
-  if p_package_slug='frames-together' and p_party_size>6 then
-    v_total := v_total + ((p_party_size-6)*150);
-  end if;
   if jsonb_typeof(coalesce(p_addons,'[]'::jsonb)) <> 'array' then raise exception 'Invalid add-ons'; end if;
   for v_item in select * from jsonb_array_elements(coalesce(p_addons,'[]'::jsonb)) loop
     select * into v_addon from public.addons where slug=v_item->>'slug' and active;
