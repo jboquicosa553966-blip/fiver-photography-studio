@@ -27,8 +27,13 @@ Deno.serve(async(req)=>{
   if(p){
    const paid=session.attributes?.payments?.find((x:any)=>x.status==="paid");
    const {error}=await db.from("payments").update({status:"paid",paid_at:new Date().toISOString(),provider_payment_id:paid?.id??null,raw_provider_data:body}).eq("id",p.id);if(error)throw error;
-   const {data:b,error:be}=await db.from("bookings").select("id,paid_amount").eq("id",p.booking_id).single();if(be)throw be;
-   const {error:ue}=await db.from("bookings").update({status:"confirmed",paid_amount:Math.min(Number(b.paid_amount)+Number(p.amount),Number((await db.from("bookings").select("subtotal").eq("id",b.id).single()).data?.subtotal??Number(b.paid_amount)+Number(p.amount))),updated_at:new Date().toISOString()}).eq("id",b.id);if(ue)throw ue;
+   const {data:b,error:be}=await db.from("bookings").select("id,paid_amount,subtotal,status,reference,user_id").eq("id",p.booking_id).single();if(be)throw be;
+   if(["expired","cancelled"].includes(b.status)){
+    const {error:re}=await db.from("service_requests").insert({user_id:b.user_id,request_type:"refund",status:"urgent_review",details:{booking_id:b.id,reference:b.reference,reason:"Payment received after booking slot was released. Staff must contact customer and review refund."},amount:p.amount});if(re)throw re;
+   }else{
+    const totalPaid=Math.min(Number(b.paid_amount)+Number(p.amount),Number(b.subtotal));
+    const {error:ue}=await db.from("bookings").update({status:"confirmed",paid_amount:totalPaid,updated_at:new Date().toISOString()}).eq("id",b.id);if(ue)throw ue;
+   }
   }else if(reference){
    const {data:b}=await db.from("bookings").select("id,amount_due_now").eq("reference",reference).maybeSingle();
    if(b){const {error}=await db.from("payments").insert({booking_id:b.id,provider:"paymongo",provider_session_id:sessionId,amount:b.amount_due_now,currency:"PHP",status:"paid",paid_at:new Date().toISOString(),raw_provider_data:body});if(error&&error.code!=="23505")throw error;await db.from("bookings").update({status:"confirmed",paid_amount:b.amount_due_now,updated_at:new Date().toISOString()}).eq("id",b.id);}
