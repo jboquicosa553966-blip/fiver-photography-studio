@@ -16,7 +16,7 @@
  const close=()=>panel.classList.remove("show");
  const durations={"frame-of-you":60,"frames-of-us":60,"frames-together":90,"frames-of-brands":120,"frames-of-vision":120};
  function fillTimes(){const d=durations[$("#bk-package").value]||60;const sel=$("#bk-time");sel.innerHTML='<option value="">Select time</option>';for(let mins=12*60;mins+d<=20*60;mins+=30){const h=Math.floor(mins/60),m=mins%60;const v=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");const label=(h%12||12)+":"+String(m).padStart(2,"0")+" "+(h<12?"AM":"PM");sel.add(new Option(label,v));}}
- $("#bk-package").addEventListener("change",()=>{const p=$("#bk-package").value;$("#bk-party").min=p==="frames-of-us"?"2":p==="frames-together"?"3":"1";$("#bk-party").value=$("#bk-party").min;$("#bk-party").max=p==="frames-together"?"6":"1";if(p==="frames-of-brands"||p==="frames-of-vision")$("#bk-party").removeAttribute("max");fillTimes();});
+ $("#bk-package").addEventListener("change",()=>{const p=$("#bk-package").value;$("#bk-party").min=p==="frames-of-us"?"2":p==="frames-together"?"3":"1";$("#bk-party").value=$("#bk-party").min;$("#bk-party").max=p==="frames-together"?"6":p==="frames-of-us"?"2":p==="frame-of-you"?"1":"";if(p==="frames-of-brands"||p==="frames-of-vision")$("#bk-party").removeAttribute("max");fillTimes();});
  $("#backend-close").onclick=close;
  $("#auth-close").onclick=()=>authPanel.classList.remove("show");
  document.querySelectorAll(".book-package").forEach(btn=>btn.addEventListener("click",()=>{const map={"Frame of You":"frame-of-you","Frames of Us":"frames-of-us","Frames Together":"frames-together","Frames of Brands":"frames-of-brands","Frames of Vision":"frames-of-vision"};$("#bk-package").value=map[btn.dataset.package]||"frame-of-you";fillTimes();open();}));
