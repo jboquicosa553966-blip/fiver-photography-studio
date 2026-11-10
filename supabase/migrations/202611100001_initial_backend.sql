@@ -81,7 +81,7 @@ create table if not exists public.bookings (
   package_slug text not null references public.packages(slug),
   starts_at timestamptz not null,
   ends_at timestamptz not null,
-  occupied_slot tstzrange generated always as (tstzrange(starts_at,to_timestamp(extract(epoch from ends_at) + 900),'[)')) stored,
+  occupied_slot tsrange generated always as (tsrange(starts_at at time zone 'UTC',(ends_at at time zone 'UTC') + interval '15 minutes','[)')) stored,
   party_size integer not null default 1 check(party_size > 0),
   concept text,
   subtotal integer not null check(subtotal >= 0),
