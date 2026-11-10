@@ -1,1 +1,1 @@
-window.FIVER_SUPABASE_CONFIG = { url: "https://YOUR_PROJECT_REF.supabase.co", anonKey: "YOUR_SUPABASE_ANON_PUBLIC_KEY" };
+window.FIVER_SUPABASE_CONFIG = { url: "https://esfwdlsqwaxwqckeepxh.supabase.co", anonKey: "sb_publishable_OuRrpFimlAUdzGYN0c-8HQ_bFs0e4n2" };
