@@ -1,0 +1,10 @@
+project_id = "fiver-photography-studio"
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.paymongo-webhook]
+verify_jwt = false
+
+[functions.my-bookings]
+verify_jwt = false
